@@ -1,10 +1,10 @@
 # ======================================================================
 # (c) Copyright 1996,1997,1998,1999,2000,2001,2004,2006,2007,2008,2009
-# Whitehead Institute for Biomedical Research, Steve Rozen, 
+# Whitehead Institute for Biomedical Research, Steve Rozen,
 # Andreas Untergasser and Helen Skaletsky
 # All rights reserved.
-# 
-#   This file is part of primer3, the libprimer3 library, the oligotm 
+#
+#   This file is part of primer3, the libprimer3 library, the oligotm
 #   library and the dpal library.
 #
 #   Primer3 and the libraries above are free software; you can
@@ -22,7 +22,7 @@
 #   along with this file (file gpl-2.0.txt in the source distribution); if
 #   not, write to the Free Software Foundation, Inc., 51 Franklin St,
 #   Fifth Floor, Boston, MA 02110-1301 USA
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -38,7 +38,7 @@
 
 # ======================================================================
 # CITING PRIMER3
-# 
+#
 # Steve Rozen and Helen J. Skaletsky (2000) Primer3 on the WWW for
 # general users and for biologist programmers. In: Krawetz S, Misener S
 # (eds) Bioinformatics Methods and Protocols: Methods in Molecular
@@ -48,7 +48,7 @@
 
 # For VALGRIND -- see end of this makefile for testing primer3_core
 # with valgrind, a leak and memory access checker.
-TESTOPTS= 
+TESTOPTS=
 WINMAKE=mingw32-make
 
 LDLIBS     = -lm
@@ -74,15 +74,15 @@ ifeq ($(TESTOPTS),--windows)
 	NTDPAL_EXE      = ntdpal.exe
 	NTTHAL_EXE      = ntthal.exe
 	OLIGOTM_EXE     = oligotm.exe
-	LONG_SEQ_EXE	= long_seq_tm_test.exe
-	MASKER_EXE	= masker.exe
+	LONG_SEQ_EXE	  = long_seq_tm_test.exe
+	MASKER_EXE	    = primer3_masker.exe
 else
 	PRIMER_EXE      = primer3_core
 	NTDPAL_EXE      = ntdpal
 	NTTHAL_EXE      = ntthal
 	OLIGOTM_EXE     = oligotm
-	LONG_SEQ_EXE	= long_seq_tm_test
-	MASKER_EXE	= masker
+	LONG_SEQ_EXE	  = long_seq_tm_test
+	MASKER_EXE	    = primer3_masker
 endif
 LIBOLIGOTM      = liboligotm.a
 LIBOLIGOTM_DYN  = liboligotm.so.1.2.0
@@ -161,7 +161,7 @@ $(LIBMASKER): masker.o
 
 $(LIBMASKER_DYN): masker.o
 	$(CC) -shared -W1,-soname,libmasker.so.1 -o $(LIBMASKER_DYN) masker.o
-	
+
 $(PRIMER_EXE): $(PRIMER_OBJECTS)
 	$(CPP) $(LDFLAGS) -o $@ $(PRIMER_OBJECTS) $(LIBOPTS) $(LDLIBS)
 
@@ -182,11 +182,11 @@ $(LONG_SEQ_EXE): long_seq_tm_test_main.c oligotm.o
 
 $(MASKER_EXE): masker_main.c $(LIBRARIES)
 	$(CPP) $(CFLAGS) -o $@ masker_main.c $(LIBRARIES) $(LIBOPTS) $(LDLIBS)
-	
-read_boulder.o: read_boulder.c read_boulder.h libprimer3.h dpal.h thal.h p3_seq_lib.h 
+
+read_boulder.o: read_boulder.c read_boulder.h libprimer3.h dpal.h thal.h p3_seq_lib.h
 	$(CPP) -c $(CFLAGS) $(P_DEFINES) -o $@ read_boulder.c
 
-print_boulder.o: print_boulder.c print_boulder.h libprimer3.h p3_seq_lib.h 
+print_boulder.o: print_boulder.c print_boulder.h libprimer3.h p3_seq_lib.h
 	$(CPP) -c $(CFLAGS) $(P_DEFINES) -o $@ print_boulder.c
 
 dpal.o: dpal.c dpal.h
@@ -206,7 +206,7 @@ dpal_primer.o: dpal.c dpal.h
 thal_primer.o: thal.c thal.h
 	$(CPP) -c $(CFLAGS) -ffloat-store $(P_DEFINES) -o $@ thal.c
 
-format_output.o: format_output.c format_output.h libprimer3.h dpal.h thal.h p3_seq_lib.h 
+format_output.o: format_output.c format_output.h libprimer3.h dpal.h thal.h p3_seq_lib.h
 	$(CPP) -c $(CFLAGS) $(P_DEFINES) -o $@ format_output.c
 
 ntdpal_main.o: ntdpal_main.c dpal.h
@@ -224,7 +224,7 @@ primer3_boulder_main.o: primer3_boulder_main.c libprimer3.h dpal.h thal.h oligot
 
 masker.o: masker.c masker.h libprimer3.h
 	$(CPP) -c $(CFLAGS) $(P_DEFINES) masker.c
-	
+
 primer_test: test
 
 test: $(PRIMER_EXE) $(NTDPAL_EXE) $(NTTHAL_EXE)
@@ -235,42 +235,42 @@ else
 endif
 
 # ======================================================================
-# 
+#
 # VALGRIND INSTRUCTIONS.
-# 
+#
 # These instructions work for linux, and run the 'memcheck'
 # functionality of valgrind.  Tests will be _much_ slower
 # when running with valgrind checks.
-# 
+#
 # If necessary, get and install valgrind (should come with most
 # Linux's, but you need valgrind >= 3.2.3)
-# 
+#
 # In the src directory for primer3:
-#  
+#
 # $ make clean
-# 
+#
 # Re-complile without optimization and run the normal tests, does
 # _not_ valgrind them:
 #
-# $ make O_OPTS=-O0 test  # The value of O_OPTS is Minus Oh Zero 
-# 
+# $ make O_OPTS=-O0 test  # The value of O_OPTS is Minus Oh Zero
+#
 # Run valgrind on a small example:
 #
 # $ valgrind --leak-check=yes --show-reachable=yes --log-file-exactly=p3vg ./primer3_core < ../example
 #
-# Check output in file p3vg 
+# Check output in file p3vg
 #
 # Note: Valgrind is at /usr/local/bin/valgrind at WI
-# 
+#
 # OK, now for the real tests:
 #
 # $ cd ../test
-# 
+#
 # Check valgrind path in p3test.pl, ntdpal_test.pl, and oligotm_test.pl
 # and correct if necessary.  This code works under valgrind 3.2.3.
-# 
+#
 # $ make TESTOPTS=--valgrind  # Remember, you have to be in test/
-# 
+#
 # When the --valgrind flag is set, the perl test scripts grep for and
 # display errors and leaks, but you need to ***look at the output** to
 # see these and figure out which test caused the problem, so you can
