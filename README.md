@@ -1,4 +1,4 @@
-# masker
+# primer3_masker
 
 Compiling:  
 cd src/  
