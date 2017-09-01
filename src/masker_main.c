@@ -18,30 +18,30 @@ void print_parameters (masker_parameters *mp);
 
 const char *pr_programme_name = "masker";
 
-int 
-main (int argc, const char *argv[]) 
+int
+main (int argc, const char *argv[])
 {
 	unsigned int idx;
 	char *end;
 	int debug = 0;
-	
+
 	/* sequence file name specified by the user, otherwise STDIN will be used */
 	const char *sequence_file_name = NULL;
 	const char *lists_file_name = NULL;
-	
+
 	/* data structure for all k-mer lists used for masking */
 	unsigned int nlists = 0;
 	unsigned int nlist_parameters = 0;
 	unsigned int npos = 0;
 	unsigned int list_pos[MAX_VARIABLES], list_components[MAX_VARIABLES];
-	
+
 	masker_parameters mp = {};
 	parameters_builder pbuilder = {};
 	input_sequence *input_seq = NULL;
-	
+
 	pr_append_str parse_err;
 	pr_append_str warnings;
-	
+
 	init_pr_append_str (&parse_err);
 	init_pr_append_str (&warnings);
 
@@ -55,17 +55,17 @@ main (int argc, const char *argv[])
 	mp.do_soft_masking = HARD_MASKING;
 	mp.masking_char = DEFAULT_MASK_CHAR;
 	mp.list_prefix = DEFAULT_LIST_FILE_PREFIX;
-	
-	
+
+
 	/* parsing and checking the commandline arguments */
 	for (idx = 1; (int)idx < argc; idx++) {
-		
+
   		if (!strcmp (argv[idx], "-h") || !strcmp (argv[idx], "--help") || !strcmp (argv[idx], "-?")) {
 			print_help (0);
-		
+
 		} else if ((int)idx == argc - 1 && argv[idx][0] != '-') {
 			sequence_file_name = argv[idx];
-			
+
 		} else if (!strcmp (argv[idx], "-lf") || !strcmp (argv[idx], "--lists_file")) {
 			/* lists specified from the file */
 			if (!argv[idx + 1] || argv[idx + 1][0] == '-') {
@@ -75,19 +75,19 @@ main (int argc, const char *argv[])
 			}
 			lists_file_name = argv[idx + 1];
 			idx += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-l") || !strcmp (argv[idx], "--list")) {
 			/* lists specified from the commandline */
 			if (nlist_parameters == MAX_VARIABLES) {
 				pr_append_new_chunk_external (&parse_err, "Maximum number of list variables reached.");
 				break;
 			}
-			
+
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "No list name specified with -l parameter!.");
 				continue;
 			}
-			
+
 			/* get the positions of list files */
 			list_pos[nlist_parameters] = idx;
 			while (argv[idx + 1]) {
@@ -106,7 +106,7 @@ main (int argc, const char *argv[])
 			list_components[nlist_parameters] = idx - list_pos[nlist_parameters];
 			nlist_parameters += 1;
 			npos += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-lp") || !strcmp (argv[idx], "--list_prefix")) {
 			/* lists specified by the prefix */
 			if (!argv[idx + 1] || argv[idx + 1][0] == '-') {
@@ -115,8 +115,8 @@ main (int argc, const char *argv[])
 				continue;
 			}
 			mp.list_prefix = (char *)argv[idx + 1];
-			idx += 1;			
-			
+			idx += 1;
+
 		} else if (!strcmp (argv[idx], "-p") || !strcmp (argv[idx], "--probability_cutoff")) {
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "No cutoff value specified! Using the default value.");
@@ -131,7 +131,7 @@ main (int argc, const char *argv[])
 				break;
 			}
 			idx += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-a") || !strcmp (argv[idx], "--absolute_value_cutoff")) {
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "No absolute cutoff value specified! Using the default value.");
@@ -146,7 +146,7 @@ main (int argc, const char *argv[])
 				break;
 			}
 			idx += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-m5") || !strcmp (argv[idx], "--mask_5p")) {
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "Number of nucleotides masked in 5' direction not specified! Using the default value.");
@@ -160,7 +160,7 @@ main (int argc, const char *argv[])
 				break;
 			}
 			idx += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-m3") || !strcmp (argv[idx], "--mask_3p")) {
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "Number of nucleotides masked in 3' direction not specified! Using the default value.");
@@ -174,7 +174,7 @@ main (int argc, const char *argv[])
 				break;
 			}
 			idx += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-c") || !strcmp (argv[idx], "--masking_char")) {
 			if (!argv[idx + 1 || argv[idx + 1][0] == '-']) {
 				pr_append_new_chunk_external (&warnings, "Character for masking not specified! Using the default value.");
@@ -188,7 +188,7 @@ main (int argc, const char *argv[])
 				break;
 			}
 			idx += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-d") || !strcmp (argv[idx], "--masking_direction")) {
 			if (!argv[idx + 1] || argv[idx + 1][0] == '-') {
 				pr_append_new_chunk_external (&warnings, "Masking direction not specified! Masking both strands by default.");
@@ -204,13 +204,13 @@ main (int argc, const char *argv[])
 				pr_append_external (&warnings, ". Masking both strands by default.");
 			}
 			idx += 1;
-			
+
 		} else if (!strcmp (argv[idx], "-s") || !strcmp (argv[idx], "--soft_mask")) {
 			mp.do_soft_masking = SOFT_MASKING;
 
 		} else if (!strcmp (argv[idx], "-D")) {
 			debug += 1;
-			
+
 		} else {
 			pr_append_new_chunk_external (&parse_err, "Unknown parameter: ");
 			pr_append_external (&parse_err, argv[idx]);
@@ -227,13 +227,13 @@ main (int argc, const char *argv[])
 	if (warnings.data != NULL) {
 		fprintf(stderr, "%s -> parsing commandline: WARNING: %s\n", pr_programme_name, warnings.data);
 	}
-	
+
 	if (lists_file_name) {
 		/* if lists are given in a text file */
 		mp.fp = read_formula_parameters_from_file (lists_file_name, &nlist_parameters, &pbuilder, &mp.formula_intercept, &parse_err);
 		nlists = pbuilder.nfp;
-	} 
-	
+	}
+
 	if (npos != 0) {
 		/* if lists are given by commandline arguments (can be added to the ones given in a file) */
 		pbuilder.fp_array = mp.fp;
@@ -244,7 +244,7 @@ main (int argc, const char *argv[])
 			unsigned int nvalues = list_components[idx];
 			char *end;
 			memcpy (&values, &argv[pos], nvalues * sizeof(*argv));
-			
+
 			if (nvalues == 1) {
 				double ic;
 				double neg = 1.0;
@@ -259,7 +259,7 @@ main (int argc, const char *argv[])
 				}
 			}
 			add_variable_to_formula_parameters (values, nvalues, &pbuilder, &parse_err);
-		}		
+		}
 		nlists = pbuilder.nfp;
 		mp.fp = pbuilder.fp_array;
 
@@ -269,10 +269,10 @@ main (int argc, const char *argv[])
 		mp.formula_intercept = DEFAULT_INTERCEPT;
 		nlists = DEFAULT_NLISTS;
 		nlist_parameters = DEFAULT_NLIST_PARAMETERS;
-	} 
+	}
 
 	mp.nlists = nlists;
-	
+
 	if (mp.abs_cutoff > 0 && nlist_parameters != 1) {
 		fprintf (stderr, "Error: Absolute value cutoff works with one list and one k-mer frequency parameter only. Currently you are using %u lists and %u parameters.\n", nlists, nlist_parameters);
 		print_help(1);
@@ -283,9 +283,9 @@ main (int argc, const char *argv[])
 		delete_input_sequence (input_seq);
 		exit(-1);
 	}
-	
+
 	if (debug > 0) print_parameters (&mp);
-	
+
 	read_and_mask_sequence (input_seq, NULL, &mp, &parse_err, debug);
 
 	if (parse_err.data != NULL) {
@@ -294,12 +294,12 @@ main (int argc, const char *argv[])
 		delete_formula_parameters (mp.fp, nlists);
 		exit(-1);
 	}
-	
+
 	destroy_pr_append_str_data (&warnings);
 	destroy_pr_append_str_data (&parse_err);
 	delete_input_sequence (input_seq);
 	delete_formula_parameters (mp.fp, nlists);
-	
+
 	if (debug > 0) fprintf (stderr, "Done!\n");
 	return 0;
 }
@@ -329,19 +329,19 @@ print_parameters (masker_parameters *mp)
 		fprintf (stderr, "        mm0 %f mm1 %f mm2 %f mm0_2 %f mm1_2 %f mm2_2 %f\n", fp->mm0, fp->mm1, fp->mm2, fp->mm0_2, fp->mm1_2, fp->mm2_2);
 	}
 	return;
-	
+
 }
 
 static void
 print_help (int exit_value)
 {
-	fprintf (stdout, "Usage: ./masker [OPTIONS] <INPUTFILE>\n");
+	fprintf (stdout, "Usage: ./primer3_masker [OPTIONS] <INPUTFILE>\n");
 	fprintf (stdout, "Options:\n");
 	fprintf (stdout, "    -h, --help                   - print this usage screen and exit\n");
 	fprintf (stdout, "    -l, --list                   - define a k-mer list as model variable (-l <LISTNAME> [coefficient mismatches sq]\n");
 	fprintf (stdout, "    -lf, --lists_file            - define a model with a file\n");
 	fprintf (stdout, "    -lp, --list_prefix           - prefix of the k-mer lists to use with default model\n");
-	fprintf (stdout, "    -p, --probability_cutoff     - masking cutoff [0, 1] (default: 0.2)\n");
+	fprintf (stdout, "    -p, --probability_cutoff     - masking cutoff [0, 1] (default: 0.1)\n");
 	fprintf (stdout, "    -a, --absolute_value_cutoff  - k-mer count cutoff\n");
 	fprintf (stdout, "    -m5, --mask_5p               - nucleotides to mask in 5' direction\n");
 	fprintf (stdout, "    -m3, --mask_3p               - nucleotides to mask in 3' direction\n");

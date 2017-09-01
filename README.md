@@ -11,9 +11,22 @@ Compiling:
 cd src/  
 make  
 
+
 Executing masker with the default model and k-mer tables:  
 cd src/  
 ./primer3_masker -lp ../test_data/test ../test_data/template.fasta  
 
-Executing Primer3 from command line (with masking switched on by setting the flags in ../test_data/primer3_test_input):  
-./primer3_core < ../test_data/primer3_test_input  
+Options:
+Usage: ./primer3_masker [OPTIONS] <INPUTFILE>
+Options:
+    -h, --help                   - print this usage screen and exit
+    -l, --list                   - define a k-mer list as model variable (-l <LISTNAME> [coefficient mismatches sq]
+    -lf, --lists_file            - define a model with a file
+    -lp, --list_prefix           - prefix of the k-mer lists to use with default model
+    -p, --probability_cutoff     - masking cutoff [0, 1] (default: 0.1)
+    -a, --absolute_value_cutoff  - k-mer count cutoff
+    -m5, --mask_5p               - nucleotides to mask in 5' direction
+    -m3, --mask_3p               - nucleotides to mask in 3' direction
+    -c, --masking_char           - character used for masking
+    -s, --soft_mask              - use soft masking
+    -d, --masking_direction      - a strand to mask (fwd, rev, both) (default: both)
