@@ -1,6 +1,6 @@
 # primer3_masker
 
-This GitHub repository stores source files of the standalone version of primer3_masker.
+This GitHub repository stores source files of the **standalone version** of primer3_masker.
 Primer3_masker is a general k-mer based sequence masking software that can be used for different purposes, not just for primer-design related masking.
 It is integrated with Primer3 but it has also many additional options that can be used for flexible masking of DNA sequences. 
 
@@ -17,6 +17,7 @@ cd src/
 ./primer3_masker -lp ../test_data/test ../test_data/template.fasta  
 
 Options:
+```
 Usage: ./primer3_masker [OPTIONS] <INPUTFILE>
 Options:
     -h, --help                   - print this usage screen and exit
@@ -30,3 +31,4 @@ Options:
     -c, --masking_char           - character used for masking
     -s, --soft_mask              - use soft masking
     -d, --masking_direction      - a strand to mask (fwd, rev, both) (default: both)
+ ```
