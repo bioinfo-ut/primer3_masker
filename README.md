@@ -16,6 +16,9 @@ Executing masker with the default model and k-mer tables:
 cd src/  
 ./primer3_masker -lp ../test_data/test ../test_data/template.fasta  
 
+K-mer lists for standalone primer3_masker are available at http://primer3.ut.ee/lists.htm.
+
+
 Options:
 ```
 Usage: ./primer3_masker [OPTIONS] <INPUTFILE>
