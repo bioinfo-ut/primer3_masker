@@ -225,15 +225,17 @@ primer3_boulder_main.o: primer3_boulder_main.c libprimer3.h dpal.h thal.h oligot
 masker.o: masker.c masker.h libprimer3.h
 	$(CPP) -c $(CFLAGS) $(P_DEFINES) masker.c
 
-primer_test: test
-
-test: $(PRIMER_EXE) $(NTDPAL_EXE) $(NTTHAL_EXE)
-ifeq ($(TESTOPTS),--windows)
-	cd ..\test & $(WINMAKE) TESTOPTS=$(TESTOPTS)
-else
-	cd ../test; make test
-endif
-
+# ======================================================================
+# Tests are not supported in standalone version
+# primer_test: test
+#
+# test: $(PRIMER_EXE) $(NTDPAL_EXE) $(NTTHAL_EXE)
+# ifeq ($(TESTOPTS),--windows)
+# 	cd ..\test & $(WINMAKE) TESTOPTS=$(TESTOPTS)
+# else
+# 	cd ../test; make test
+# endif
+#
 # ======================================================================
 #
 # VALGRIND INSTRUCTIONS.
