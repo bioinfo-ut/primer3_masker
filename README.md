@@ -4,21 +4,24 @@ This GitHub repository stores source files of the **standalone version** of prim
 Primer3_masker is a general k-mer based sequence masking software that can be used for different purposes, not just for primer-design related masking.
 It is integrated with Primer3 but it has also many additional options that can be used for flexible masking of DNA sequences.
 
-Users interested in primer design software Primer3 and/or Primer3 web interface should look at https://sourceforge.net/projects/primer3/, which is the main location for Primer3 and may contain newer updates.
+Users interested in primer design software Primer3 and/or Primer3 web interface should look at https://github.com/primer3-org/primer3, which is the main location for Primer3 and may contain newer updates.
 
+Installing:  
+``
+git clone https://github.com/bioinfo-ut/primer3_masker  
+``
 
 Compiling:  
-``
+```
+cd primer3_masker  
 cd src/  
-make  
-``
-
+make
+```
 
 Executing masker with the default model and k-mer tables:  
-`
-cd src/  
+``
 ./primer3_masker -lp ../test_data/test ../test_data/template.fasta  
-`
+``
 
 K-mer lists for standalone primer3_masker are available at http://primer3.ut.ee/lists.htm.
 
