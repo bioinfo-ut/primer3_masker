@@ -343,10 +343,10 @@ print_help (int exit_value)
 	fprintf (stdout, "    -lp, --list_prefix           - prefix of the k-mer lists to use with default model\n");
 	fprintf (stdout, "    -p, --probability_cutoff     - masking cutoff [0, 1] (default: 0.1)\n");
 	fprintf (stdout, "    -a, --absolute_value_cutoff  - k-mer count cutoff\n");
-	fprintf (stdout, "    -m5, --mask_5p               - nucleotides to mask in 5' direction\n");
-	fprintf (stdout, "    -m3, --mask_3p               - nucleotides to mask in 3' direction\n");
-	fprintf (stdout, "    -c, --masking_char           - character used for masking\n");
-	fprintf (stdout, "    -s, --soft_mask              - use soft masking\n");
+	fprintf (stdout, "    -m5, --mask_5p               - nucleotides to mask in 5' direction (default: 1)\n");
+	fprintf (stdout, "    -m3, --mask_3p               - nucleotides to mask in 3' direction (default: 0)\n");
+	fprintf (stdout, "    -c, --masking_char           - character used for masking (default: N)\n");
+	fprintf (stdout, "    -s, --soft_mask              - use soft masking (default: false)\n");
 	fprintf (stdout, "    -d, --masking_direction      - a strand to mask (fwd, rev, both) (default: both)\n");
 	exit (exit_value);
 }

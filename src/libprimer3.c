@@ -1,6 +1,6 @@
 /*
 Copyright (c) 1996,1997,1998,1999,2000,2001,2004,2006,2007,2008,2009,
-              2010,2011,2012
+              2010,2011,2012,2016
 Whitehead Institute for Biomedical Research, Steve Rozen
 (http://purl.com/STEVEROZEN/), Andreas Untergasser and Helen Skaletsky.
 All rights reserved.
@@ -391,7 +391,8 @@ static void   oligo_repeat_library_mispriming(primer_rec *,
                                               const seq_args *,
                                               oligo_type,
                                               oligo_stats *,
-                                              const dpal_arg_holder *);
+                                              const dpal_arg_holder *,
+                                              pr_append_str *);
 
 static void   oligo_template_mispriming(primer_rec *,
                                         const p3_global_settings *,
@@ -562,6 +563,9 @@ p3_destroy_global_settings(p3_global_settings *a)
     }
     if (NULL != a->o_args.must_match_three_prime) {
     	free(a->o_args.must_match_three_prime);
+    }
+    if (NULL != a->mp.list_prefix) {
+    	free(a->mp.list_prefix);
     }
     destroy_seq_lib(a->p_args.repeat_lib);
     destroy_seq_lib(a->o_args.repeat_lib);
@@ -759,7 +763,7 @@ pr_set_default_global_args_1(p3_global_settings *a)
   
   a->min_5_prime_overlap_of_junction = 7;
   a->min_3_prime_overlap_of_junction = 4;
- 
+  
   a->mask_template                   = 0;
   a->masking_parameters_changed      = 0;
   a->mp.mdir                         = both_separately;
@@ -769,9 +773,10 @@ pr_set_default_global_args_1(p3_global_settings *a)
   a->mp.print_sequence               = 0;
   a->mp.do_soft_masking              = 1;
   a->mp.nlists                       = DEFAULT_NLISTS;
-  a->mp.list_prefix                  = DEFAULT_LIST_FILE_PREFIX;
+  a->mp.list_prefix                  = (char *) pr_safe_malloc (strlen (DEFAULT_LIST_FILE_PREFIX) + 1);
+  strcpy (a->mp.list_prefix, DEFAULT_LIST_FILE_PREFIX);
   a->mp.fp                           = NULL;
-  a->mp.formula_intercept            = DEFAULT_INTERCEPT;
+  a->mp.formula_intercept            = DEFAULT_INTERCEPT;  
 }
 
 /* Add a pair of integers to an  array of intervals */
@@ -816,18 +821,18 @@ p3_add_to_2_interval_array(interval_array_t4 *interval_arr, int i1, int i2, int 
 /* ============================================================ */
 
 int
-interval_array_t2_count(const interval_array_t2 *array) 
+  interval_array_t2_count(const interval_array_t2 *array)
 {
   return array->count;
 }
-
+  
 const int *
-interval_array_t2_get_pair(const interval_array_t2 *array, int i) 
+  interval_array_t2_get_pair(const interval_array_t2 *array, int i)
 {
-  if (i > array->count) abort();
-  if (i < 0) abort();
-  return array->pairs[i];
-}
+   if (i > array->count) abort();
+      if (i < 0) abort();
+         return array->pairs[i];
+}                
 
 /* ============================================================ */
 /* BEGIN functions for p3retval                                 */
@@ -1107,7 +1112,10 @@ destroy_seq_args(seq_args *sa)
 
   /* edited by T. Koressaar for lowercase masking */
   free(sa->trimmed_orig_seq);
-
+  
+  free(sa->trimmed_masked_seq_r);
+  free(sa->trimmed_masked_seq);
+  
   free(sa->upcased_seq);
   free(sa->upcased_seq_r);
   free(sa->sequence_name);
@@ -1201,10 +1209,10 @@ choose_primers(const p3_global_settings *pa,
     destroy_p3retval(retval);
     return NULL;  /* If we get here, that means errno should be ENOMEM. */
   }
-  
+
   /* Change some parameters to fit the task */
   _adjust_seq_args(pa, sa, &retval->per_sequence_err,&retval->warnings);
-  
+
   if (pa->dump) {
     printf("After _adjust_seq_args\n");
     p3_print_args(pa, sa) ;
@@ -1797,7 +1805,7 @@ choose_internal_oligo(p3retval *retval,
        
       if (h->repeat_sim.score == NULL) {
         oligo_repeat_library_mispriming(h, pa, sa, OT_INTL, &retval->intl.expl,
-                                        dpal_arg_to_use);
+                                        dpal_arg_to_use, &retval->glob_err);
         if (!OK_OR_MUST_USE(h)) continue;
       }
 
@@ -3054,14 +3062,17 @@ calc_and_check_oligo_features(const p3_global_settings *pa,
   if(pa->lowercase_masking == 1) {
     char *sequence_check = sa->trimmed_orig_seq;
     if (pa->mask_template == 1) {
-      if (l == OT_LEFT) sequence_check = sa->trimmed_masked_seq;
-      else if (l == OT_RIGHT) sequence_check = sa->trimmed_masked_seq_r;
-    } 
+       if (l == OT_LEFT) sequence_check = sa->trimmed_masked_seq;
+       else if (l == OT_RIGHT) sequence_check = sa->trimmed_masked_seq_r;
+    }                          
     if (is_lowercase_masked(three_prime_pos,
                             sequence_check,
                             h, stats)) {
       if (!must_use) return;
     }
+  } else if(pa->lowercase_masking == 0 && pa->mask_template == 1){
+           pr_append_new_chunk(&retval->warnings, "Use PRIMER_LOWERCASE_MASKING=1 when using PRIMER_MASK_TEMPLATE=1.");
+           return;
   }
   /* end T. Koressar's changes */
 
@@ -3381,7 +3392,7 @@ calc_and_check_oligo_features(const p3_global_settings *pa,
       || (pa->thermodynamic_oligo_alignment==1 && po_args->weights.repeat_sim)) {
 
     oligo_repeat_library_mispriming(h, pa, sa, l, stats,
-                                    dpal_arg_to_use);
+                                    dpal_arg_to_use, &retval->glob_err);
     if (pa->thermodynamic_template_alignment==0 && OK_OR_MUST_USE(h)) {
       oligo_template_mispriming(h, pa, sa, l, stats,
 				dpal_arg_to_use->local_end,
@@ -3407,7 +3418,7 @@ calc_and_check_oligo_features(const p3_global_settings *pa,
 
   if (three_conditions || po_args->weights.repeat_sim) {
     oligo_repeat_library_mispriming(h, pa, sa, l, stats,
-                                    dpal_arg_to_use);
+                                    dpal_arg_to_use, &retval->glob_err);
   }
 
 
@@ -3466,17 +3477,15 @@ calc_and_check_oligo_features(const p3_global_settings *pa,
       break;
     }
   }
-  
   /* Calculate failure rate */
-  /* Added by M. Lepamets */  
-  h->failure_rate = 0.0;
-  if (pa->mask_template && h->length >= pa->mp.window_size) {
-	  op.fwd = string_to_word (oligo_seq, h->length, pa->mp.window_size);
-	  op.rev = op.fwd; /* not used in this calculation */
-	  calculate_scores (&op, &pa->mp, pa->mp.window_size);
-	  h->failure_rate = op.score_fwd;
-  }
-
+  /* Added by M. Lepamets */
+   h->failure_rate = 0.0;
+   if (pa->mask_template && h->length >= pa->mp.window_size) {
+     op.fwd = string_to_word (oligo_seq, h->length, pa->mp.window_size);
+     op.rev = op.fwd; /* not used in this calculation */
+     calculate_scores (&op, &pa->mp, pa->mp.window_size);
+     h->failure_rate = op.score_fwd;
+   }
   /* FIX ME FIXME Steve, is this really needed? */
   op_set_completely_written(h);
 
@@ -3640,8 +3649,8 @@ p_obj_fn(const p3_global_settings *pa,
       
       /* edited by M. Lepamets */
       if (pa->p_args.weights.failure_rate) {
-	   sum += pa->p_args.weights.failure_rate * h->failure_rate;
-      }
+           sum += pa->p_args.weights.failure_rate * h->failure_rate;
+      }     
 
       /* BEGIN: secondary structures */
       if (pa->thermodynamic_oligo_alignment==0) {
@@ -4140,7 +4149,7 @@ characterize_pair(p3retval *retval,
   if (retval->fwd.oligo[m].repeat_sim.score == NULL) {
     /* We have not yet checked the oligo against the repeat library. */
     oligo_repeat_library_mispriming(&retval->fwd.oligo[m], pa, sa, OT_LEFT,
-                                    &retval->fwd.expl,dpal_arg_to_use);
+                                    &retval->fwd.expl,dpal_arg_to_use, &retval->glob_err);
     if (OK_OR_MUST_USE(&retval->fwd.oligo[m])) {
       oligo_template_mispriming(&retval->fwd.oligo[m], pa, sa, OT_LEFT,
 				&retval->fwd.expl,
@@ -4155,7 +4164,7 @@ characterize_pair(p3retval *retval,
    
   if (retval->rev.oligo[n].repeat_sim.score == NULL) {
     oligo_repeat_library_mispriming(&retval->rev.oligo[n], pa, sa, OT_RIGHT,
-                                    &retval->rev.expl, dpal_arg_to_use);
+                                    &retval->rev.expl, dpal_arg_to_use, &retval->glob_err);
     if (OK_OR_MUST_USE(&retval->rev.oligo[n])) {
       oligo_template_mispriming(&retval->rev.oligo[n], pa, sa, OT_RIGHT,
 				&retval->rev.expl, 
@@ -4892,7 +4901,8 @@ oligo_repeat_library_mispriming(primer_rec *h,
                                 const seq_args *sa,
                                 oligo_type l,
                                 oligo_stats *ostats,
-                                const dpal_arg_holder *dpal_arg_to_use)
+                                const dpal_arg_holder *dpal_arg_to_use,
+                                pr_append_str *error)
 {
   char
     s[MAX_PRIMER_LENGTH+1],     /* Will contain the oligo sequence. */
@@ -4954,10 +4964,11 @@ oligo_repeat_library_mispriming(primer_rec *h,
                  ? dpal_arg_to_use->local_end_ambig
                  : dpal_arg_to_use->local));
 
-
       if (w > SHRT_MAX || w < SHRT_MIN) {
-        abort(); /* TO DO, propagate error */
         /* This check is necessary for the next 9 lines */
+        pr_append_new_chunk( error,
+         "Out of range error occured calculating match to repeat library");
+        return;
       }
       h->repeat_sim.score[i] = w;
       if(w > max){
@@ -5269,7 +5280,7 @@ static int compare_nucleotides(const char a, const char b)
   if(a >= 'a' && a <= 'z'){
     x = ('A' + a - 'a');
   }
-  if(b >= 'b' && b <= 'z'){
+  if(b >= 'a' && b <= 'z'){
     y = ('A' + b - 'a');
   }
   
@@ -5614,7 +5625,7 @@ p3_get_pair_array_explain_string(const pair_array_t *pair_array)
 const char *
 libprimer3_release(void) 
 {
-  return "libprimer3 release 2.3.6";
+  return "libprimer3 release 2.4.0";
 }
 
 const char *
@@ -5844,8 +5855,8 @@ _adjust_seq_args(const p3_global_settings *pa,
       pr_append_new_chunk(nonfatal_err,
 			  "Task pick_discriminative_primers requires exactly one SEQUENCE_TARGET");
     }
-    sa->force_left_end = sa->tar2.pairs[0][0];
-    sa->force_right_end = sa->tar2.pairs[0][0] + sa->tar2.pairs[0][1] - 1;
+    sa->force_left_end = sa->tar2.pairs[0][0] - 1;
+    sa->force_right_end = sa->tar2.pairs[0][0] + sa->tar2.pairs[0][1];
   }
 
   /* If no included region is specified,
@@ -5890,36 +5901,35 @@ _adjust_seq_args(const p3_global_settings *pa,
     /* edited by T. Koressaar for lowercase masking */
     sa->trimmed_orig_seq = (char *) pr_safe_malloc(sa->incl_l + 1);
     _pr_substr(sa->sequence, sa->incl_s, sa->incl_l, sa->trimmed_orig_seq);
-  
+    
     /* Masks original trimmed sequence */
     /* edited by M. Lepamets */
-    if (pa->mask_template && (pa->pick_left_primer == 1 && pa->pick_right_primer == 1)) {    
-      input_sequence *input_seq;
-      output_sequence *output_seq;
-
-      input_seq = create_input_sequence_from_string (sa->trimmed_orig_seq, nonfatal_err);
-      output_seq =  create_output_sequence ((unsigned long long) sa->incl_l, pa->mp.mdir, nonfatal_err);
-      
-      read_and_mask_sequence (input_seq, output_seq, &pa->mp, nonfatal_err, 0);
-      
-      if (output_seq->sequence) {
-	if (pa->mp.mdir == fwd) {
-		sa->trimmed_masked_seq = (char *) pr_safe_malloc(sa->incl_l + 1);
-		strcpy (sa->trimmed_masked_seq, output_seq->sequence);
-	} else if (pa->mp.mdir == rev) {
-		sa->trimmed_masked_seq_r = (char *) pr_safe_malloc(sa->incl_l + 1);
-		strcpy (sa->trimmed_masked_seq_r, output_seq->sequence);		
-	}
-      } else {
-	sa->trimmed_masked_seq = (char *) pr_safe_malloc(sa->incl_l + 1);
-	strcpy (sa->trimmed_masked_seq, output_seq->sequence_fwd);
-	sa->trimmed_masked_seq_r = (char *) pr_safe_malloc(sa->incl_l + 1);
-	strcpy (sa->trimmed_masked_seq_r, output_seq->sequence_rev);      
-      }   
-      delete_input_sequence (input_seq);
-      delete_output_sequence (output_seq);
+    if (pa->mask_template && (pa->pick_left_primer == 1 && pa->pick_right_primer == 1)) {
+       input_sequence *input_seq;
+       output_sequence *output_seq;
+                          
+       input_seq = create_input_sequence_from_string (sa->trimmed_orig_seq, nonfatal_err);
+       output_seq =  create_output_sequence ((unsigned long long) sa->incl_l, pa->mp.mdir, nonfatal_err);
+                
+       read_and_mask_sequence (input_seq, output_seq, &pa->mp, nonfatal_err, 0);
+       if (output_seq->sequence) {
+          if (pa->mp.mdir == fwd) {
+             sa->trimmed_masked_seq = (char *) pr_safe_malloc(sa->incl_l + 1);
+             strcpy (sa->trimmed_masked_seq, output_seq->sequence);
+          } else if (pa->mp.mdir == rev) {
+             sa->trimmed_masked_seq_r = (char *) pr_safe_malloc(sa->incl_l + 1);
+             strcpy (sa->trimmed_masked_seq_r, output_seq->sequence);
+          }
+       } else {
+             sa->trimmed_masked_seq = (char *) pr_safe_malloc(sa->incl_l + 1);
+             strcpy (sa->trimmed_masked_seq, output_seq->sequence_fwd);
+             sa->trimmed_masked_seq_r = (char *) pr_safe_malloc(sa->incl_l + 1);
+             strcpy (sa->trimmed_masked_seq_r, output_seq->sequence_rev);
+       }
+       delete_input_sequence (input_seq);
+       delete_output_sequence (output_seq);
     }
-  
+                                                                                                           
     /* Copies the whole sequence into upcased_seq */
     sa->upcased_seq = (char *) pr_safe_malloc(strlen(sa->sequence) + 1);
     strcpy(sa->upcased_seq, sa->sequence);
@@ -8720,7 +8730,6 @@ p3_print_args(const p3_global_settings *p, seq_args *s)
     printf("  min_right_three_prime_distance %i\n", p->min_right_three_prime_distance) ;
     printf("  min_5_prime_overlap_of_junction %i\n", p->min_5_prime_overlap_of_junction);
     printf("  min_3_prime_overlap_of_junction %i\n", p->min_3_prime_overlap_of_junction);
-    
     printf("  mask_template %i\n", p->mask_template);
     printf("  failure_rate %f\n", p->mp.failure_rate);
     printf("  nucl_masked_in_5p_direction %i\n", p->mp.nucl_masked_in_5p_direction);
