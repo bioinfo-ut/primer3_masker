@@ -20,7 +20,7 @@ make primer3_masker
 
 Executing masker with the default model and k-mer tables:  
 ``
-./primer3_masker -lp ../test_data/test ../test_data/template.fasta  
+./primer3_masker -lh ../test_data/ -lp test ../test_data/template.fasta
 ``
 
 Executing masker with absolute k-mer cutoff. Requires definition of single list name instead of list name prefix:  
@@ -36,10 +36,14 @@ Options:
 Usage: ./primer3_masker [OPTIONS] <INPUTFILE>
 Options:
     -h, --help                   - print this usage screen and exit
+
     -p, --probability_cutoff     - masking cutoff based on probability of PCR failure [0, 1] (default: 0.1)
-    -lp, --list_prefix           - define prefix of the k-mer lists to use (default: kmer_lists/homo_sapiens)
+    -lh, --kmer_lists_path       - path to the kmer list files (default: ../kmer_lists/)
+    -lp, --list_prefix           - define prefix of the k-mer lists to use (default: homo_sapiens)
+
     -a, --absolute_value_cutoff  - masking cutoff based on k-mer count; requires a single list name, defined with -l
     -l, --list                   - define a single k-mer list; for using with absolute cutoff option -a
+
     -m5, --mask_5p               - nucleotides to mask in 5' direction (default: 1)
     -m3, --mask_3p               - nucleotides to mask in 3' direction (default: 0)
     -c, --masking_char           - character used for masking (default: N)
