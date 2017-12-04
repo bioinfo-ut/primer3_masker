@@ -15,7 +15,7 @@ Compiling:
 ```
 cd primer3_masker  
 cd src/  
-make
+make primer3_masker
 ```
 
 Executing masker with the default model and k-mer tables:  
@@ -39,7 +39,7 @@ Options:
     -p, --probability_cutoff     - masking cutoff based on probability of PCR failure [0, 1] (default: 0.1)
     -lp, --list_prefix           - define prefix of the k-mer lists to use (default: kmer_lists/homo_sapiens)
     -a, --absolute_value_cutoff  - masking cutoff based on k-mer count; requires a single list name, defined with -l
-    -l, --list                   - define a k-mer list; for using with absolute cutoff option -a
+    -l, --list                   - define a single k-mer list; for using with absolute cutoff option -a
     -m5, --mask_5p               - nucleotides to mask in 5' direction (default: 1)
     -m3, --mask_3p               - nucleotides to mask in 3' direction (default: 0)
     -c, --masking_char           - character used for masking (default: N)
