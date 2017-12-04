@@ -1,3 +1,40 @@
+/*
+ Copyright (c) 1996,1997,1998,1999,2000,2001,2004,2006,2007,2008,2009
+ Whitehead Institute for Biomedical Research, Steve Rozen
+ (http://purl.com/STEVEROZEN/), and Helen Skaletsky
+ All rights reserved.
+
+       This file is part of primer3 software suite.
+
+       This software suite is is free software;
+       you can redistribute it and/or modify it under the terms
+       of the GNU General Public License as published by the Free
+       Software Foundation; either version 2 of the License, or (at
+       your option) any later version.
+
+       This software is distributed in the hope that it will be useful,
+       but WITHOUT ANY WARRANTY; without even the implied warranty of
+       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+       GNU General Public License for more details.
+
+       You should have received a copy of the GNU General Public License
+       along with this software (file gpl-2.0.txt in the source
+       distribution); if not, write to the Free Software
+       Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ OWNERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON A THEORY
+ OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -28,6 +65,7 @@ main (int argc, const char *argv[])
 	/* sequence file name specified by the user, otherwise STDIN will be used */
 	const char *sequence_file_name = NULL;
 	const char *lists_file_name = NULL;
+	const char *kmer_lists_path = NULL;
 
 	/* data structure for all k-mer lists used for masking */
 	unsigned int nlists = 0;
@@ -55,23 +93,32 @@ main (int argc, const char *argv[])
 	mp.do_soft_masking = HARD_MASKING;
 	mp.masking_char = DEFAULT_MASK_CHAR;
 	mp.list_prefix = DEFAULT_LIST_FILE_PREFIX;
-
+	kmer_lists_path = "../kmer_lists/";
+	if(argc < 2){
+	 print_help (0);
+	}
 
 	/* parsing and checking the commandline arguments */
 	for (idx = 1; (int)idx < argc; idx++) {
 
-  		if (!strcmp (argv[idx], "-h") || !strcmp (argv[idx], "--help") || !strcmp (argv[idx], "-?")) {
+  		if (!strcmp (argv[idx], "-h") || !strcmp (argv[idx], "--help") || !strcmp (argv[idx], "-?") || (argc < 2)) {
 			print_help (0);
 
 		} else if ((int)idx == argc - 1 && argv[idx][0] != '-') {
 			sequence_file_name = argv[idx];
+			FILE *file = fopen(sequence_file_name, "r");
+			if (file){
+			     fclose(file);
+	                } else {
+			    print_help(1);
+			}
 
 		} else if (!strcmp (argv[idx], "-lf") || !strcmp (argv[idx], "--lists_file")) {
 			/* lists specified from the file */
 			if (!argv[idx + 1] || argv[idx + 1][0] == '-') {
 				pr_append_new_chunk_external (&warnings, "No lists file specified.");
 				idx += 1;
-				continue;
+				print_help(1);
 			}
 			lists_file_name = argv[idx + 1];
 			idx += 1;
@@ -80,12 +127,12 @@ main (int argc, const char *argv[])
 			/* lists specified from the commandline */
 			if (nlist_parameters == MAX_VARIABLES) {
 				pr_append_new_chunk_external (&parse_err, "Maximum number of list variables reached.");
-				break;
+				print_help(1);
 			}
 
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "No list name specified with -l parameter!.");
-				continue;
+				print_help(1);
 			}
 
 			/* get the positions of list files */
@@ -112,11 +159,19 @@ main (int argc, const char *argv[])
 			if (!argv[idx + 1] || argv[idx + 1][0] == '-') {
 				pr_append_new_chunk_external (&warnings, "No list prefix specified! Using the default value.");
 				idx += 1;
-				continue;
+				print_help(1);
 			}
 			mp.list_prefix = (char *)argv[idx + 1];
 			idx += 1;
-
+		} else if (!strcmp (argv[idx], "-lh") || !strcmp (argv[idx], "--kmer_lists_path")) {
+			/* kmer lists path */
+			if (!argv[idx + 1] || argv[idx + 1][0] == '-') {
+	                         pr_append_new_chunk_external (&warnings, "No list prefix specified! Using the default value.");
+				 idx += 1;
+			         print_help(1);
+                       }
+                       kmer_lists_path = (char *)argv[idx + 1];
+		       idx += 1;
 		} else if (!strcmp (argv[idx], "-p") || !strcmp (argv[idx], "--probability_cutoff")) {
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "No cutoff value specified! Using the default value.");
@@ -128,6 +183,7 @@ main (int argc, const char *argv[])
 			if (*end != 0 || mp.failure_rate < 0 || mp.failure_rate > 1) {
 				pr_append_new_chunk_external (&parse_err, "Invalid cutoff value: ");
 				pr_append_external (&parse_err, argv[idx + 1]);
+				/*free(parse_err.data);*/
 				break;
 			}
 			idx += 1;
@@ -136,7 +192,7 @@ main (int argc, const char *argv[])
 			if (!argv[idx + 1]) {
 				pr_append_new_chunk_external (&warnings, "No absolute cutoff value specified! Using the default value.");
 				idx += 1;
-				continue;
+				break;
 			}
 			mp.abs_cutoff = strtod (argv[idx + 1], &end);
 			mp.failure_rate = 0.0;
@@ -157,7 +213,7 @@ main (int argc, const char *argv[])
 			if (*end != 0) {
 				pr_append_new_chunk_external (&parse_err, "Invalid number of nucleotides masked in 5' direction: ");
 				pr_append_external (&parse_err, argv[idx + 1]);
-				break;
+				print_help(1);
 			}
 			idx += 1;
 
@@ -171,7 +227,7 @@ main (int argc, const char *argv[])
 			if (*end != 0) {
 				pr_append_new_chunk_external (&parse_err, "Invalid number of nucleotides masked in 3' direction: ");
 				pr_append_external (&parse_err, argv[idx + 1]);
-				break;
+				print_help(1);
 			}
 			idx += 1;
 
@@ -185,7 +241,7 @@ main (int argc, const char *argv[])
 			if (strlen(argv[idx + 1]) > 1 || mp.masking_char < 33 || mp.masking_char > 126) {
 				pr_append_new_chunk_external (&parse_err, "Invalid character for masking: ");
 				pr_append_external (&parse_err, argv[idx + 1]);
-				break;
+				print_help(1);
 			}
 			idx += 1;
 
@@ -214,10 +270,16 @@ main (int argc, const char *argv[])
 		} else {
 			pr_append_new_chunk_external (&parse_err, "Unknown parameter: ");
 			pr_append_external (&parse_err, argv[idx]);
-			break;
+			print_help(1);
 		}
 	}
-
+        /*FILE *file = fopen(sequence_file_name, "r");
+        if (file){
+           fclose(file);
+        } else {
+            print_help(1);
+	}
+         */
 	input_seq = create_input_sequence_from_file_name (sequence_file_name, &parse_err);
 
 	if (parse_err.data != NULL) {
@@ -265,7 +327,7 @@ main (int argc, const char *argv[])
 
 	} else if (nlists == 0 && !lists_file_name) {
 		/* if there are no lists specified use the default formula */
-		mp.fp = create_default_formula_parameters (mp.list_prefix, &parse_err);
+		mp.fp = create_default_formula_parameters (mp.list_prefix, kmer_lists_path, &parse_err);
 		mp.formula_intercept = DEFAULT_INTERCEPT;
 		nlists = DEFAULT_NLISTS;
 		nlist_parameters = DEFAULT_NLIST_PARAMETERS;
@@ -299,6 +361,7 @@ main (int argc, const char *argv[])
 	destroy_pr_append_str_data (&parse_err);
 	delete_input_sequence (input_seq);
 	delete_formula_parameters (mp.fp, nlists);
+	free(pbuilder.used_lists);
 
 	if (debug > 0) fprintf (stderr, "Done!\n");
 	return 0;
