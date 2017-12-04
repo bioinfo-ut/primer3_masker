@@ -1,3 +1,6 @@
+#include <fstream>
+#include <iostream>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -6,6 +9,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "masker.h"
 #include "libprimer3.h"
@@ -71,7 +75,8 @@ get_header_name_from_input (input_sequence *input_seq, unsigned long long header
 	char *header_name = (char *) malloc (sizeof(char) * (current_pos - header_pos + 2));
 	if (!header_name) {
 		pr_append_new_chunk_external (parse_err, "Memory allocation for header name failed!");
-		return header_name;
+		free(header_name);
+		return NULL;
 	}
 	if (input_seq->sequence_file) {
 		fseek (input_seq->sequence_file, header_pos, SEEK_SET);
@@ -81,6 +86,7 @@ get_header_name_from_input (input_sequence *input_seq, unsigned long long header
 	}
 	if (!v) {
 		pr_append_new_chunk_external (parse_err, "Reading header name failed!");
+		free(header_name);
 		return NULL;
 	}
 	return header_name;
@@ -118,7 +124,6 @@ create_formula_parameters_from_list_file_name (const char *list_file_name, pr_ap
 	memset (fp, 0, sizeof(formula_parameters));
 	strcpy(fp->list_file_name, list_file_name);
 	data = mmap_by_filename (fp->list_file_name, &size);
-	
 	if (!data) {
 		pr_append_new_chunk_external (parse_err, "List file not found: ");
 		pr_append_external (parse_err, fp->list_file_name);
@@ -135,19 +140,28 @@ create_formula_parameters_from_list_file_name (const char *list_file_name, pr_ap
 	memcpy (&fp->oligo_length, data + 12, sizeof(unsigned int));
 	memcpy (&fp->words_in_list, data + 16, sizeof(unsigned int));
 	memcpy (&header_size, data + 32, sizeof(unsigned long long));
+	if (!fp->words_in_list){
+	   pr_append_new_chunk_external (parse_err, "List file contains no kmers: ");
+           pr_append_external (parse_err, fp->list_file_name);
+	   return NULL;
+	}
 	fp->word_list = data + header_size;
-	fp->pointer = data;
+        fp->pointer = data;
 	fp->size = size;
 	fp->binary_mask = create_binary_mask (fp->oligo_length);
 	return fp;
 }
 
 formula_parameters *
-create_formula_parameters_from_list_file_prefix (const char *list_name_prefix, unsigned int word_length, pr_append_str *parse_err)
+create_formula_parameters_from_list_file_prefix (const char *list_name_prefix, const char *kmer_lists_path, unsigned int word_length, pr_append_str *parse_err)
 {
 	char list_file_name[300];
 	formula_parameters *fp;
-	sprintf(list_file_name, "%s_%u.list", list_name_prefix, word_length);
+	sprintf(list_file_name, "%s%s_%u.list", kmer_lists_path, list_name_prefix, word_length);
+	if(0 != access(list_file_name,0)){
+		pr_append_new_chunk_external (parse_err, "Cannot find list file");
+		return NULL;
+	}
 	fp = create_formula_parameters_from_list_file_name (list_file_name, parse_err);
 	return fp;
 }
@@ -179,6 +193,8 @@ add_variable_to_formula_parameters (char **list_values, unsigned int nvalues, pa
 			pbuilder->fp_array = (formula_parameters **) realloc (pbuilder->fp_array, pbuilder->nslots * sizeof(formula_parameters *));
 			if (!pbuilder->used_lists || !pbuilder->fp_array) {
 				pr_append_new_chunk_external (parse_err, "Memory allocation for parameters builder failed!");
+				free(pbuilder->used_lists);
+				free(pbuilder->fp_array);
 				return 1;
 			}
 		}
@@ -234,12 +250,11 @@ add_variable_to_formula_parameters (char **list_values, unsigned int nvalues, pa
 }
 
 formula_parameters **
-create_default_formula_parameters (const char *list_name_prefix, pr_append_str *parse_err)
+create_default_formula_parameters (const char *list_name_prefix, const char *kmer_lists_path, pr_append_str *parse_err)
 {
-	formula_parameters *fp1 = create_formula_parameters_from_list_file_prefix (list_name_prefix, DEFAULT_WORD_LEN_1, parse_err);
-	formula_parameters *fp2 = create_formula_parameters_from_list_file_prefix (list_name_prefix, DEFAULT_WORD_LEN_2, parse_err);
+	formula_parameters *fp1 = create_formula_parameters_from_list_file_prefix (list_name_prefix, kmer_lists_path, DEFAULT_WORD_LEN_1, parse_err);
+	formula_parameters *fp2 = create_formula_parameters_from_list_file_prefix (list_name_prefix, kmer_lists_path, DEFAULT_WORD_LEN_2, parse_err);
 	if (!fp1 || !fp2) return NULL; 
-	
 	formula_parameters **fp = (formula_parameters **) malloc (2 * sizeof (formula_parameters *));
 	if (!fp) {
 		pr_append_new_chunk_external (parse_err, "Memory allocation for formula parameters failed!");
@@ -293,7 +308,11 @@ read_formula_parameters_from_file (const char *lists_file_name, unsigned int *nl
 		}
 		
 		v = add_variable_to_formula_parameters (values, nvalues, pbuilder, parse_err);
-		if (v) return NULL;
+		if (v) {
+		    free(pbuilder->used_lists);
+		    free(pbuilder->fp_array);
+		    return NULL;
+		}
 		*nlist_parameters += 1;
 	}
 	return pbuilder->fp_array;
@@ -329,10 +348,13 @@ create_output_sequence (unsigned long long seq_len, masking_direction mdir, pr_a
 		return output_seq;
 	}
 	if (mdir == both_separately) {
-		output_seq->sequence_fwd = (char *) malloc (sizeof(char) * seq_len);
-		output_seq->sequence_rev = (char *) malloc (sizeof(char) * seq_len);
+		output_seq->sequence_fwd = (char *) malloc (seq_len + 1);
+		memset (output_seq->sequence_fwd, 0, seq_len + 1);
+		output_seq->sequence_rev = (char *) malloc (seq_len + 1);
+		memset (output_seq->sequence_rev, 0, seq_len + 1);
 	} else {
-		output_seq->sequence = (char *) malloc (sizeof(char) * seq_len);
+		output_seq->sequence = (char *) malloc (seq_len + 1);
+		memset (output_seq->sequence, 0, seq_len + 1);
 	}
 	if (!output_seq->sequence_fwd && !output_seq->sequence_rev && !output_seq->sequence) {
 		pr_append_new_chunk_external (parse_err, "Memory allocation for output sequence failed!");
@@ -378,19 +400,14 @@ write_header_to_output (output_sequence *output_seq, char *header_name, const ma
 void 
 write_char_to_output (output_sequence *output_seq, char c, char c_other, const masker_parameters *mp, pr_append_str *parse_err)
 {
-	void *v = 0;
 	if (mp->print_sequence) {
 		fprintf (stdout, "%c", c);
 	} else if (output_seq) {
 		if (mp->mdir == both_separately) {
-			v = memcpy (output_seq->sequence_fwd + output_seq->pos, &c, 1);
-			if (v) v= memcpy (output_seq->sequence_rev + output_seq->pos, &c_other, 1);
+			output_seq->sequence_fwd[output_seq->pos] = c;
+			output_seq->sequence_rev[output_seq->pos] = c_other;
 		} else {
-			v = memcpy (output_seq->sequence + output_seq->pos, &c, 1);
-		}
-		if (!v) {
-			pr_append_new_chunk_external (parse_err, "Writing sequence to output failed!");
-			return;
+			output_seq->sequence[output_seq->pos] = c;
 		}
 		output_seq->pos += 1;
 	}
@@ -517,10 +534,8 @@ binary_search (formula_parameters *fp, unsigned long long word)
 	low = 0;
 	high = fp->words_in_list - 1;
 	mid = (low + high) / 2;
-			
 	while (low <= high) {
 		current_word = *((unsigned long long *) (fp->word_list + mid * (sizeof (unsigned long long) + sizeof (unsigned int))));
-				
 		if (current_word < word) {
 			low = mid + 1;
 		} else if (current_word > word) {
@@ -545,12 +560,18 @@ get_frequency_of_canonical_oligo (formula_parameters *fp, unsigned long long wor
 		freq_rev = binary_search (fp, get_reverse_complement (word, fp->oligo_length));
 		
 		//fprintf (stderr, "rev %u\n", freq_rev);
-		
+		if(freq_rev==0){ /*heuristics is used, by default, for speed and memory issues, 
+					kmer lists are generated with kmers freq >1*/
+		   freq_rev=1;
+		}
 		return freq_rev;
 	}
 	
 	//fprintf (stderr, "fwd %u\n", freq_fwd);
-	
+	if(freq_fwd==0){ /*heuristics is used, by default, for speed and memory issues,
+			         kmer lists are generated with kmers freq >1*/
+	       freq_fwd=1;
+        }
 	return freq_fwd;
 }
 
@@ -765,6 +786,7 @@ read_and_mask_sequence (input_sequence *input_seq, output_sequence *output_seq, 
 				initialize_masking_buffer (mbuffer, word_length + mp->nucl_masked_in_3p_direction);
 				init_round = 1;
 				is_header = 0;
+				free(header_name);
 			}
 		} else {
 			if (!init_round && mbuffer->wi == mbuffer->ri) {
