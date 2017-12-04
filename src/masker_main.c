@@ -338,11 +338,10 @@ print_help (int exit_value)
 	fprintf (stdout, "Usage: ./primer3_masker [OPTIONS] <INPUTFILE>\n");
 	fprintf (stdout, "Options:\n");
 	fprintf (stdout, "    -h, --help                   - print this usage screen and exit\n");
-	fprintf (stdout, "    -l, --list                   - define a k-mer list as model variable (-l <LISTNAME> [coefficient mismatches sq]\n");
-	fprintf (stdout, "    -lf, --lists_file            - define a model with a file\n");
-	fprintf (stdout, "    -lp, --list_prefix           - prefix of the k-mer lists to use with default model\n");
-	fprintf (stdout, "    -p, --probability_cutoff     - masking cutoff [0, 1] (default: 0.1)\n");
-	fprintf (stdout, "    -a, --absolute_value_cutoff  - k-mer count cutoff\n");
+	fprintf (stdout, "    -p, --probability_cutoff     - masking cutoff based on probability of PCR failure [0, 1] (default: 0.1)\n");
+	fprintf (stdout, "    -lp, --list_prefix           - define prefix of the k-mer lists to use (default: kmer_lists/homo_sapiens)\n");
+	fprintf (stdout, "    -a, --absolute_value_cutoff  - masking cutoff based on k-mer count; requires a single list name, defined with -l\n");
+	fprintf (stdout, "    -l, --list                   - define a single k-mer list; for using with absolute cutoff option -a\n");
 	fprintf (stdout, "    -m5, --mask_5p               - nucleotides to mask in 5' direction (default: 1)\n");
 	fprintf (stdout, "    -m3, --mask_3p               - nucleotides to mask in 3' direction (default: 0)\n");
 	fprintf (stdout, "    -c, --masking_char           - character used for masking (default: N)\n");

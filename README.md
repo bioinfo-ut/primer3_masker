@@ -23,6 +23,11 @@ Executing masker with the default model and k-mer tables:
 ./primer3_masker -lp ../test_data/test ../test_data/template.fasta  
 ``
 
+Executing masker with absolute k-mer cutoff. Requires definition of single list name instead of list name prefix:  
+``
+./primer3_masker -a 10 -l ../test_data/test_16.list ../test_data/template.fasta
+``
+
 K-mer lists for standalone primer3_masker are available at http://primer3.ut.ee/lists.htm.
 
 
@@ -31,14 +36,13 @@ Options:
 Usage: ./primer3_masker [OPTIONS] <INPUTFILE>
 Options:
     -h, --help                   - print this usage screen and exit
-    -l, --list                   - define a k-mer list as model variable (-l <LISTNAME> [coefficient mismatches sq]
-    -lf, --lists_file            - define a model with a file
-    -lp, --list_prefix           - prefix of the k-mer lists to use with default model
-    -p, --probability_cutoff     - masking cutoff [0, 1] (default: 0.1)
-    -a, --absolute_value_cutoff  - k-mer count cutoff
-    -m5, --mask_5p               - nucleotides to mask in 5' direction
-    -m3, --mask_3p               - nucleotides to mask in 3' direction
-    -c, --masking_char           - character used for masking
-    -s, --soft_mask              - use soft masking
+    -p, --probability_cutoff     - masking cutoff based on probability of PCR failure [0, 1] (default: 0.1)
+    -lp, --list_prefix           - define prefix of the k-mer lists to use (default: kmer_lists/homo_sapiens)
+    -a, --absolute_value_cutoff  - masking cutoff based on k-mer count; requires a single list name, defined with -l
+    -l, --list                   - define a k-mer list; for using with absolute cutoff option -a
+    -m5, --mask_5p               - nucleotides to mask in 5' direction (default: 1)
+    -m3, --mask_3p               - nucleotides to mask in 3' direction (default: 0)
+    -c, --masking_char           - character used for masking (default: N)
+    -s, --soft_mask              - use soft masking (default: false)
     -d, --masking_direction      - a strand to mask (fwd, rev, both) (default: both)
  ```
