@@ -410,6 +410,6 @@ print_help (int exit_value)
 	fprintf (stdout, "    -m3, --mask_3p               - nucleotides to mask in 3' direction (default: 0)\n");
 	fprintf (stdout, "    -c, --masking_char           - character used for masking (default: N)\n");
 	fprintf (stdout, "    -s, --soft_mask              - use soft masking (default: false)\n");
-	fprintf (stdout, "    -d, --masking_direction      - a strand to mask (fwd, rev, both) (default: both)\n");
+	fprintf (stdout, "    -d, --masking_direction      - a strand to mask (fwd, rev, both) (default: both)\n\n");
 	exit (exit_value);
 }
